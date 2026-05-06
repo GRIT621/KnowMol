@@ -116,8 +116,45 @@ The KnowMol fragment features come from the LLM agents now included under
 - `agents/base_agent.py` wraps the OpenAI-compatible chat API and tracks token
   usage.
 
-Use the feature-mining helper to sample training records, call the agents, and
-write a downstream-compatible vocabulary file:
+For the protein-target DTI setting, use the iterative discovery entrypoint. It
+is the `KnowMol_GitHub` version of the old `bace_mol.py` loop: sample
+`drug,target,label` records, ask the molecular agent for RDKit SMARTS, ask the
+protein agent for target-sequence fragments, train a downstream model, then feed
+high-error bad cases into the next round.
+
+```bash
+python scripts/knowmol_discovery.py \
+  --dataset davis \
+  --data ../EviDTI_dataset/data/splits/davis \
+  --output-dir outputs/discovery/davis \
+  --rounds 3 \
+  --sample-size 10 \
+  --model pro-deepseek-r1 \
+  --api-base "$OPENAI_BASE_URL" \
+  --api-key "$OPENAI_API_KEY"
+```
+
+Each round writes `knowmol_vocab_round_XXX.py`, trains an AutoGluon model under
+`outputs/discovery/davis/models/`, and saves badcase-guided metrics in
+`discovery_summary_*.csv`. The final downstream vocabulary is:
+
+```bash
+outputs/discovery/davis/knowmol_vocab_final.py
+```
+
+Then run the regular downstream validation with that vocabulary:
+
+```bash
+python scripts/knowmol_downstream.py train \
+  --dataset davis \
+  --data ../EviDTI_dataset/data/splits/davis \
+  --model-path models/davis_agent_vocab \
+  --vocab-py outputs/discovery/davis/knowmol_vocab_final.py \
+  --evaluate-after-train
+```
+
+For a one-shot vocabulary without the bace-style feedback loop, use the smaller
+feature-mining helper:
 
 ```bash
 python scripts/mine_knowmol_features.py \
@@ -135,17 +172,6 @@ The generated file defines:
   `substructure_features()`.
 - `binding_fragments`: protein fragment keys used by
   `protein_substructure_features()`.
-
-Then pass that vocabulary into downstream validation:
-
-```bash
-python scripts/knowmol_downstream.py train \
-  --dataset davis \
-  --data ../EviDTI_dataset/data/splits/davis \
-  --model-path models/davis_agent_vocab \
-  --vocab-py outputs/davis_agent_vocab.py \
-  --evaluate-after-train
-```
 
 To continue mining without repeating existing fragments, pass the current
 vocabulary as an exclusion list:
