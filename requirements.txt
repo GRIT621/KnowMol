@@ -1,0 +1,8 @@
+pandas
+numpy
+scikit-learn
+biopython
+rdkit
+lifelines
+autogluon.tabular
+openai>=1.0.0
