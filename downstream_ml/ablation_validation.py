@@ -12,6 +12,7 @@ try:
         KIBA_FEATURE_NAMES,
         STANDARD_AA,
         get_tabular_predictor,
+        load_feature_dicts,
         load_feature_vocab,
         print_metrics,
         read_or_split_dataset,
@@ -28,6 +29,7 @@ except ImportError:
         KIBA_FEATURE_NAMES,
         STANDARD_AA,
         get_tabular_predictor,
+        load_feature_dicts,
         load_feature_vocab,
         print_metrics,
         read_or_split_dataset,
@@ -168,12 +170,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="KnowMol downstream ML ablation experiments")
     parser.add_argument("--dataset", choices=["davis", "drugbank", "kiba"], required=True)
     parser.add_argument("--data", required=True, help="CSV file or split directory containing train/valid/test CSVs")
-    parser.add_argument("--output-dir", required=True, help="Directory for ablation AutoGluon models")
+    parser.add_argument("--output-dir", required=True, help="Directory for ablation validation models")
     parser.add_argument(
         "--vocab-py",
         default="/data/lsj/KnowMol/EviDTI_dataset/knowmol_36.py",
-        help="Python file defining substructure_patterns and binding_fragments",
+        help="Legacy combined Python/txt file defining substructure_patterns and binding_fragments",
     )
+    parser.add_argument("--drug-dict", default=str(Path(__file__).with_name("drug_dict.txt")))
+    parser.add_argument("--protein-dict", default=str(Path(__file__).with_name("protein_dict.txt")))
     parser.add_argument("--ablations", nargs="+", choices=ABLATION_CHOICES, default=ABLATION_CHOICES)
     parser.add_argument("--time-limit", type=int, default=600)
     parser.add_argument("--presets", default="best_quality")
@@ -182,7 +186,7 @@ def main() -> None:
     parser.add_argument("--eval-metric", default="roc_auc")
     args = parser.parse_args()
 
-    substructures, fragments = load_feature_vocab(args.vocab_py)
+    substructures, fragments = load_feature_dicts(args.drug_dict, args.protein_dict, args.vocab_py)
     train_data, valid_data, test_data = read_or_split_dataset(args.data, args.dataset, args.seed)
     print(f"Dataset: {args.dataset}")
     print(f"Train={len(train_data)} Valid={len(valid_data)} Test={len(test_data)}")
@@ -212,4 +216,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

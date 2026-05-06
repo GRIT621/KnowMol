@@ -35,6 +35,7 @@ class MolecularAgent(BaseAgent):
         samples: list[dict[str, Any]],
         excluded_substructures: Any,
         feedback_strategy: str = "random",
+        memory_context: str = "",
     ) -> str:
         sample_block = self._format_samples(samples, feedback_strategy)
         dataset_name = getattr(self.dataset, "dataset_name", "").lower()
@@ -60,6 +61,9 @@ You are a molecular expert and RDKit SMARTS engineer.
 Below is a sample of molecules from the {task_name} task:
 {sample_block}
 
+Memory context from previous validation rounds:
+{memory_context or "No previous memory is available yet."}
+
 Your task:
 Identify and list ten (10) distinct and independently predictive molecular substructures that are likely to influence {task_name}.
 
@@ -68,6 +72,8 @@ Requirements:
 - Each must be represented as a valid SMARTS string compatible with RDKit's Chem.MolFromSmarts().
 - Each SMARTS must represent a new substructure NOT present in the following exclusion list:
 {excluded_substructures}
+- Use long-memory features as evidence for what has already helped.
+- Avoid recently rejected candidates unless a more specific SMARTS can address the badcase feedback.
 {badcase_guidance}
 
 Format:
@@ -117,10 +123,12 @@ You must NOT repeat or partially include any of the excluded substructures. Even
         samples: list[dict[str, Any]],
         excluded_substructures: Any,
         feedback_strategy: str = "random",
+        memory_context: str = "",
     ) -> str:
         prompt = self._build_prompt(
             samples,
             excluded_substructures,
             feedback_strategy=feedback_strategy,
+            memory_context=memory_context,
         )
         return self.generate_paginated(messages=[{"role": "user", "content": prompt}])
