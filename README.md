@@ -25,46 +25,8 @@ Use `--mock-agents` for local smoke tests that do not call an LLM API.
 
 ## MoleculeNet Data
 
-Molecule-only MoleculeNet tasks are supported through standardized CSV files
-with `drug,label` columns. Download and convert a binary task with:
-
-```bash
-python scripts/download_moleculenet.py \
-  --dataset bace \
-  --output-dir data/moleculenet/processed
-```
-
-For multi-task datasets, choose one label column:
-
-```bash
-python scripts/download_moleculenet.py \
-  --dataset tox21 \
-  --task NR-AR \
-  --output-dir data/moleculenet/processed
-```
-
-Regression datasets such as FreeSolv, ESOL, and Lipophilicity must be
-binarized before using the current binary downstream validator:
-
-```bash
-python scripts/download_moleculenet.py \
-  --dataset freesolv \
-  --binarize-threshold -7.0 \
-  --output-dir data/moleculenet/processed
-```
-
-Run downstream validation on a standardized molecule-only file:
-
-```bash
-python scripts/knowmol_downstream.py train \
-  --dataset bace \
-  --data data/moleculenet/processed/bace_Class.csv \
-  --model-path models/moleculenet/bace \
-  --evaluate-after-train
-```
-
-Run KnowMol feature discovery on molecule-only data. In this mode the protein
-agent and protein features are disabled automatically:
+MoleculeNet molecule-only tasks use the same `knowmol_discovery.py` workflow.
+After preparing the task CSV, switch the dataset name:
 
 ```bash
 python knowmol_discovery.py \
@@ -75,26 +37,19 @@ python knowmol_discovery.py \
   --mode molecule
 ```
 
+Replace `bace` with another MoleculeNet dataset such as `bbbp`, `hiv`,
+`clintox`, `sider`, `tox21`, `toxcast`, `muv`, `freesolv`, `esol`, or `lipo`.
+Protein agents and protein features are disabled automatically for
+molecule-only datasets.
+
 ## PRMT3 Case Study
 
-The PRMT3 natural-compound screen is exposed as a framework-compatible script
-that reuses the KnowMol feature dictionaries and downstream metrics:
+The PRMT3 case-study scores were generated with the framework-compatible
+screening script:
 
 ```bash
 python scripts/prmt3_screen.py \
   --train-csv ../EviDTI_dataset/data/case_studies/prmt3/PRMT3_Final_Training_Set.csv \
-  --ligands-csv ../EviDTI_dataset/data/case_studies/prmt3/PRMT3_drugbank_Matches.csv \
-  --output outputs/prmt3/prmt3_scores.csv \
-  --model-path models/prmt3/prmt3_rf.pkl \
-  --use-default-prmt3-seq
-```
-
-To reuse a trained PRMT3 model for rescoring:
-
-```bash
-python scripts/prmt3_screen.py \
-  --load-model \
-  --model-path models/prmt3/prmt3_rf.pkl \
   --ligands-csv ../EviDTI_dataset/data/case_studies/prmt3/PRMT3_drugbank_Matches.csv \
   --output outputs/prmt3/prmt3_scores.csv \
   --use-default-prmt3-seq
