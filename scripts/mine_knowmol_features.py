@@ -77,7 +77,27 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Mine KnowMol molecular SMARTS and protein fragments with LLM agents."
     )
-    parser.add_argument("--dataset", choices=["davis", "drugbank", "kiba", "bace", "bbbp", "freesolv"], required=True)
+    parser.add_argument(
+        "--dataset",
+        choices=[
+            "davis",
+            "drugbank",
+            "kiba",
+            "prmt3",
+            "bace",
+            "bbbp",
+            "hiv",
+            "clintox",
+            "sider",
+            "tox21",
+            "toxcast",
+            "muv",
+            "freesolv",
+            "esol",
+            "lipo",
+        ],
+        required=True,
+    )
     parser.add_argument("--data", required=True, help="CSV file or split directory containing train/valid/test CSVs")
     parser.add_argument("--output", required=True, help="Output Python file with substructure_patterns and binding_fragments")
     parser.add_argument("--existing-vocab", help="Optional Python vocab file whose keys should be excluded")
@@ -92,9 +112,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
-    from downstream_ml.validation import read_or_split_dataset
+    from downstream_ml.validation import is_molecule_only_dataset, read_or_split_dataset
 
     train, _, _ = read_or_split_dataset(args.data, args.dataset, args.seed)
+    molecule_only = is_molecule_only_dataset(args.dataset) or "target" not in train.columns
+    if molecule_only and args.mode == "protein":
+        raise ValueError("Molecule-only datasets do not contain protein targets; use --mode molecule.")
+    effective_mode = "molecule" if molecule_only and args.mode == "both" else args.mode
     samples = sample_records(train, args.sample_size, args.seed)
     existing_substructures, existing_fragments = load_existing_keys(args.existing_vocab)
     context = DatasetContext(dataset_name=args.dataset)
@@ -102,7 +126,7 @@ def main() -> None:
     substructures: list[str] = []
     fragments: list[str] = []
 
-    if args.mode in {"both", "molecule"}:
+    if effective_mode in {"both", "molecule"}:
         molecular_agent = MolecularAgent(
             name="MolecularAgent",
             dataset=context,
@@ -114,7 +138,7 @@ def main() -> None:
         substructures = parse_numbered_items(molecular_text)
         print(f"Molecular substructures: {len(substructures)}")
 
-    if args.mode in {"both", "protein"}:
+    if effective_mode in {"both", "protein"}:
         protein_agent = ProteinAgent(
             name="ProteinAgent",
             dataset=context,

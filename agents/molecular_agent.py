@@ -42,7 +42,15 @@ class MolecularAgent(BaseAgent):
         task_name = {
             "bace": "BACE inhibitor activity classification",
             "bbbp": "Blood-Brain Barrier Penetration (BBBP)",
+            "hiv": "HIV replication inhibition classification",
+            "clintox": "clinical toxicity classification",
+            "sider": "drug side-effect classification",
+            "tox21": "Tox21 toxicity classification",
+            "toxcast": "ToxCast assay activity classification",
+            "muv": "Maximum Unbiased Validation virtual-screening classification",
             "freesolv": "aqueous solvation free energy",
+            "esol": "aqueous solubility prediction",
+            "lipo": "lipophilicity prediction",
         }.get(dataset_name, "Drug-Target Interaction")
 
         badcase_guidance = ""

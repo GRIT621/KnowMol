@@ -35,11 +35,13 @@ def choose_samples(
     sample_size: int,
     seed: int,
 ) -> list[dict[str, Any]]:
+    sample_columns = [column for column in ["drug", "target", "label"] if column in train.columns]
     if round_index > 0 and feedback_strategy == "badcase" and badcases is not None and len(badcases):
-        return badcases.head(sample_size)[["drug", "target", "label", "_feedback_error"]].to_dict("records")
+        badcase_columns = sample_columns + ["_feedback_error"]
+        return badcases.head(sample_size)[badcase_columns].to_dict("records")
 
     sampled = train.sample(n=min(sample_size, len(train)), random_state=seed + round_index)
-    return sampled[["drug", "target", "label"]].to_dict("records")
+    return sampled[sample_columns].to_dict("records")
 
 
 def mock_target_fragments(samples: list[dict[str, Any]], excluded_fragments: dict[str, Any], limit: int = 10) -> str:
@@ -70,7 +72,27 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Iterative KnowMol feature discovery for drug-target interaction datasets."
     )
-    parser.add_argument("--dataset", choices=["davis", "drugbank", "kiba"], required=True)
+    parser.add_argument(
+        "--dataset",
+        choices=[
+            "davis",
+            "drugbank",
+            "kiba",
+            "prmt3",
+            "bace",
+            "bbbp",
+            "hiv",
+            "clintox",
+            "sider",
+            "tox21",
+            "toxcast",
+            "muv",
+            "freesolv",
+            "esol",
+            "lipo",
+        ],
+        required=True,
+    )
     parser.add_argument("--data", required=True, help="CSV file or split directory containing train/valid/test CSVs")
     parser.add_argument("--output-dir", default="outputs/knowmol_api_sklearn_target")
     parser.add_argument("--existing-vocab", help="Optional vocab file to resume from")
@@ -108,7 +130,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
-    from downstream_ml.validation import load_feature_dicts, load_feature_vocab, print_metrics, read_or_split_dataset
+    from downstream_ml.validation import (
+        is_molecule_only_dataset,
+        load_feature_dicts,
+        load_feature_vocab,
+        print_metrics,
+        read_or_split_dataset,
+    )
 
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -120,6 +148,10 @@ def main() -> None:
         valid = valid.sample(n=min(args.max_valid_rows, len(valid)), random_state=args.seed).reset_index(drop=True)
     if args.max_test_rows:
         test = test.sample(n=min(args.max_test_rows, len(test)), random_state=args.seed).reset_index(drop=True)
+    molecule_only = is_molecule_only_dataset(args.dataset) or "target" not in train.columns
+    if molecule_only and args.mode in {"target", "protein"}:
+        raise ValueError("Molecule-only datasets do not contain protein targets; use --mode molecule or --mode drug.")
+    effective_mode = "molecule" if molecule_only and args.mode == "both" else args.mode
     output_dir = Path(args.output_dir)
     if output_dir == Path("/private/tmp/knowmol_api_sklearn_target"):
         output_dir = ROOT / "outputs" / "knowmol_api_sklearn_target"
@@ -141,6 +173,8 @@ def main() -> None:
         initial_substructures, initial_fragments = load_feature_vocab(memory_source)
     elif not initial_substructures and not initial_fragments and args.drug_dict and args.protein_dict:
         initial_substructures, initial_fragments = load_feature_dicts(args.drug_dict, args.protein_dict)
+    if molecule_only:
+        initial_fragments = {}
 
     feature_aggregate = FeatureAggregator(initial_substructures, initial_fragments)
     context = DatasetContext(dataset_name=args.dataset)
@@ -162,6 +196,8 @@ def main() -> None:
     rows: list[dict[str, Any]] = []
 
     print(f"Dataset: {args.dataset} | Train={len(train)} Valid={len(valid)} Test={len(test)}")
+    if molecule_only:
+        print("Molecule-only mode: target/protein agents and protein features are disabled.")
     print(
         "Initial drug features="
         f"{len(feature_aggregate.substructures)} target features={len(feature_aggregate.fragments)}"
@@ -196,7 +232,7 @@ def main() -> None:
 
         added_drug = 0
         added_target = 0
-        if args.mode in {"both", "drug", "molecule"}:
+        if effective_mode in {"both", "drug", "molecule"}:
             if args.mock_agents:
                 drug_text = mock_drug_smarts(feature_aggregate.substructures)
             else:
@@ -210,7 +246,7 @@ def main() -> None:
             short_memory.set_agent_output("drug_agent_output", drug_text)
             print(f"Added drug SMARTS features: {added_drug}")
 
-        if args.mode in {"both", "target", "protein"}:
+        if effective_mode in {"both", "target", "protein"}:
             if args.mock_agents:
                 target_text = mock_target_fragments(samples, feature_aggregate.fragments)
             else:

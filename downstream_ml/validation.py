@@ -60,6 +60,26 @@ KIBA_FEATURE_NAMES = [
     "MolWt",
 ] + [f"fp_{i}" for i in range(1024)]
 
+DTI_DATASETS = {"davis", "drugbank", "kiba", "prmt3"}
+MOLECULENET_DATASETS = {
+    "bace",
+    "bbbp",
+    "hiv",
+    "clintox",
+    "sider",
+    "tox21",
+    "toxcast",
+    "muv",
+    "freesolv",
+    "esol",
+    "lipo",
+}
+SUPPORTED_DATASETS = sorted(DTI_DATASETS | MOLECULENET_DATASETS)
+
+
+def is_molecule_only_dataset(dataset_type: str | None) -> bool:
+    return bool(dataset_type and dataset_type.lower() in MOLECULENET_DATASETS)
+
 
 def _load_vocab_assignments(path: str | Path | None) -> dict[str, Any]:
     if path is None:
@@ -305,37 +325,56 @@ def extract_features(
     drug_sub = data["drug"].apply(lambda s: substructure_features(s, substructure_patterns))
     drug_df_sub = pd.DataFrame(drug_sub.tolist(), columns=list(substructure_patterns.keys()))
 
-    protein_combined = data["target"].apply(protein_to_features_optimized)
-    prot_base_names = ["gravy", "aromaticity", "instability", "isoelectric_point", "mol_weight"]
-    prot_aac_names = [f"aac_{aa}" for aa in STANDARD_AA]
-    protein_df = pd.DataFrame(protein_combined.tolist(), columns=prot_base_names + prot_aac_names)
+    feature_frames = [drug_df, drug_df_sub]
+    has_target = "target" in data.columns and not is_molecule_only_dataset(dataset_type)
+    if has_target:
+        protein_combined = data["target"].apply(protein_to_features_optimized)
+        prot_base_names = ["gravy", "aromaticity", "instability", "isoelectric_point", "mol_weight"]
+        prot_aac_names = [f"aac_{aa}" for aa in STANDARD_AA]
+        protein_df = pd.DataFrame(protein_combined.tolist(), columns=prot_base_names + prot_aac_names)
 
-    protein_sub = data["target"].apply(lambda s: protein_substructure_features(s, binding_fragments))
-    protein_df_sub = pd.DataFrame(
-        protein_sub.tolist(),
-        columns=[f"frag_{i + 1}" for i in range(len(binding_fragments))],
-    )
+        protein_sub = data["target"].apply(lambda s: protein_substructure_features(s, binding_fragments))
+        protein_df_sub = pd.DataFrame(
+            protein_sub.tolist(),
+            columns=[f"frag_{i + 1}" for i in range(len(binding_fragments))],
+        )
+        feature_frames.extend([protein_df, protein_df_sub])
 
-    x = pd.concat([drug_df, drug_df_sub, protein_df, protein_df_sub], axis=1)
+    x = pd.concat(feature_frames, axis=1)
     y = data["label"].reset_index(drop=True) if "label" in data.columns else pd.Series([0] * len(data))
     return x.fillna(0), y
 
 
 def normalize_dataset(df: pd.DataFrame, dataset_type: str) -> pd.DataFrame:
-    """Normalize Davis/DrugBank/KIBA column names to drug, target, label."""
+    """Normalize DTI or molecule-only CSV columns to drug,target,label."""
     dataset_type = dataset_type.lower()
     df = df.copy()
 
     rename_map = {
+        "mol": "drug",
+        "molecule": "drug",
+        "SMILES": "drug",
         "smile": "drug",
         "smiles": "drug",
         "seq": "target",
+        "sequence": "target",
         "cid": "drug_id",
         "uid": "target_id",
+        "Class": "label",
+        "class": "label",
+        "Label": "label",
     }
     df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
 
-    if "drug" not in df.columns or "target" not in df.columns:
+    if "drug" not in df.columns:
+        if dataset_type == "drugbank" and df.shape[1] >= 5:
+            cols = list(df.columns)
+            df = df.rename(columns={cols[-4]: "drug_id", cols[-3]: "drug", cols[-2]: "target_id", cols[-1]: "target"})
+        else:
+            raise ValueError("Cannot find molecule column. Expected drug, smiles, smile, mol, molecule, or SMILES.")
+
+    molecule_only = is_molecule_only_dataset(dataset_type)
+    if not molecule_only and "target" not in df.columns:
         if dataset_type == "drugbank" and df.shape[1] >= 5:
             cols = list(df.columns)
             df = df.rename(columns={cols[-4]: "drug_id", cols[-3]: "drug", cols[-2]: "target_id", cols[-1]: "target"})
@@ -353,7 +392,8 @@ def normalize_dataset(df: pd.DataFrame, dataset_type: str) -> pd.DataFrame:
         else:
             raise ValueError(f"{dataset_type} data must include a label column.")
 
-    return df.dropna(subset=["drug", "target", "label"]).reset_index(drop=True)
+    required = ["drug", "label"] if molecule_only else ["drug", "target", "label"]
+    return df.dropna(subset=required).reset_index(drop=True)
 
 
 def read_drugbank_dataset(data_path: str | Path) -> pd.DataFrame:
@@ -443,6 +483,9 @@ def print_split_diagnostics(train: pd.DataFrame, valid: pd.DataFrame, test: pd.D
         test_pairs = set(zip(test["drug_id"].astype(str), test["target_id"].astype(str)))
         print(f"Train/test pair overlap: {len(train_pairs & test_pairs)} / {len(test_pairs)} test pairs")
 
+    if "target" not in train.columns:
+        print("Molecule-only dataset detected: protein descriptors and protein fragments are disabled.")
+
 
 def get_tabular_predictor():
     from autogluon.tabular import TabularPredictor
@@ -456,9 +499,10 @@ def compute_binary_metrics(y_true: Iterable[int], y_pred: Iterable[int], y_prob:
     y_prob = np.asarray(y_prob)
 
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
+    has_both_classes = len(np.unique(y_true)) == 2
     return {
-        "auc_roc": roc_auc_score(y_true, y_prob),
-        "auc_pr": average_precision_score(y_true, y_prob),
+        "auc_roc": roc_auc_score(y_true, y_prob) if has_both_classes else float("nan"),
+        "auc_pr": average_precision_score(y_true, y_prob) if has_both_classes else float("nan"),
         "accuracy": accuracy_score(y_true, y_pred),
         "precision": precision_score(y_true, y_pred, zero_division=0),
         "recall": recall_score(y_true, y_pred, zero_division=0),
@@ -530,7 +574,10 @@ def evaluate_predictor(
     test_with_scores["pred_prob"] = y_prob
     test_with_scores["error_margin"] = np.abs(y_true - y_prob)
     print("\nTop 5 bad cases")
-    print(test_with_scores.nlargest(5, "error_margin")[["drug", "target", "label", "pred_prob", "error_margin"]])
+    badcase_columns = [
+        column for column in ["drug", "target", "label", "pred_prob", "error_margin"] if column in test_with_scores.columns
+    ]
+    print(test_with_scores.nlargest(5, "error_margin")[badcase_columns])
 
     if show_leaderboard:
         print("\nModel leaderboard on the selected test set")
@@ -621,7 +668,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="mode", required=True)
 
     train = subparsers.add_parser("train", help="Train a tabular validation model")
-    train.add_argument("--dataset", choices=["davis", "drugbank", "kiba"], required=True)
+    train.add_argument("--dataset", choices=SUPPORTED_DATASETS, required=True)
     train.add_argument("--data", required=True, help="CSV file or split directory containing train/valid/test CSVs")
     train.add_argument("--model-path", required=True)
     train.add_argument("--time-limit", type=int, default=600)
@@ -633,7 +680,7 @@ def build_parser() -> argparse.ArgumentParser:
     train.set_defaults(func=train_mode)
 
     test = subparsers.add_parser("test", help="Evaluate a saved model on the dataset test split")
-    test.add_argument("--dataset", choices=["davis", "drugbank", "kiba"], required=True)
+    test.add_argument("--dataset", choices=SUPPORTED_DATASETS, required=True)
     test.add_argument("--data", required=True, help="CSV file or split directory containing train/valid/test CSVs")
     test.add_argument("--model-path", required=True)
     test.add_argument("--seed", type=int, default=42)
