@@ -67,7 +67,8 @@ Model paths and selected drug/target IDs are passed as command-line parameters.
 
 ## Included Data
 
-Raw Davis, DrugBank, and KIBA DTI CSV files are included under `data/raw/`:
+Raw Davis, DrugBank, and KIBA DTI CSV files matching the EviDTI data are
+included under `data/raw/`:
 
 - `data/raw/davis_total_cid_unid.csv`
 - `data/raw/drugbank_total_cid_unid.csv`
