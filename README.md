@@ -22,6 +22,8 @@ python knowmol_discovery.py \
 ```
 
 Use `--mock-agents` for local smoke tests that do not call an LLM API.
+During discovery, candidate features are consolidated by validation-split
+performance; the test split is reported only as a held-out monitor.
 
 ## MoleculeNet Data
 

@@ -513,7 +513,7 @@ def compute_binary_metrics(y_true: Iterable[int], y_pred: Iterable[int], y_prob:
 
 
 def print_metrics(metrics: dict[str, float]) -> None:
-    print("\nTest metrics")
+    print("\nMetrics")
     print("-" * 32)
     for key in ["auc_roc", "auc_pr", "accuracy", "precision", "recall", "specificity", "f1", "mcc"]:
         print(f"{key:12s}: {metrics[key]:.4f}")
