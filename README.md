@@ -12,7 +12,7 @@ python knowmol_discovery.py \
   --dataset davis \
   --data data/raw/davis_total_cid_unid.csv \
   --output-dir discovered_fragments/runs/davis \
-  --rounds 5 \
+  --rounds 30 \
   --sample-size 2 \
   --mode both \
   --model deepseek-v3.2 \
@@ -21,11 +21,10 @@ python knowmol_discovery.py \
   --validator-backend sklearn
 ```
 
-During discovery, candidate features are consolidated by validation-split
-performance; the test split is reported only as a held-out monitor. The current
-feature dictionaries live in `discovered_fragments/drug_dict.txt` and
-`discovered_fragments/protein_dict.txt`; generated discovery runs are written
-under `discovered_fragments/runs/`.
+This command runs KnowMol discovery on a DTI dataset and writes the discovered
+molecular substructures and protein fragments to `discovered_fragments/runs/`.
+The released feature dictionaries are provided in
+`discovered_fragments/drug_dict.txt` and `discovered_fragments/protein_dict.txt`.
 
 ## MoleculeNet Data
 
