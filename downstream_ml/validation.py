@@ -630,8 +630,9 @@ def prmt3_mode(args: argparse.Namespace) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="KnowMol downstream ML validation")
-    parser.add_argument("--drug-dict", default=str(Path(__file__).with_name("drug_dict.txt")))
-    parser.add_argument("--protein-dict", default=str(Path(__file__).with_name("protein_dict.txt")))
+    default_dict_dir = Path(__file__).resolve().parents[1] / "discovered_fragments"
+    parser.add_argument("--drug-dict", default=str(default_dict_dir / "drug_dict.txt"))
+    parser.add_argument("--protein-dict", default=str(default_dict_dir / "protein_dict.txt"))
 
     subparsers = parser.add_subparsers(dest="mode", required=True)
 

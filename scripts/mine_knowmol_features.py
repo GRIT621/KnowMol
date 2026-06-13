@@ -101,8 +101,8 @@ def build_parser() -> argparse.ArgumentParser:
         default=str(ROOT / "discovered_fragments" / "manual" / "knowmol_vocab.py"),
         help="Output Python file with substructure_patterns and binding_fragments",
     )
-    parser.add_argument("--drug-dict", default=str(ROOT / "downstream_ml" / "drug_dict.txt"))
-    parser.add_argument("--protein-dict", default=str(ROOT / "downstream_ml" / "protein_dict.txt"))
+    parser.add_argument("--drug-dict", default=str(ROOT / "discovered_fragments" / "drug_dict.txt"))
+    parser.add_argument("--protein-dict", default=str(ROOT / "discovered_fragments" / "protein_dict.txt"))
     parser.add_argument("--mode", choices=["both", "molecule", "protein"], default="both")
     parser.add_argument("--sample-size", type=int, default=20)
     parser.add_argument("--seed", type=int, default=42)

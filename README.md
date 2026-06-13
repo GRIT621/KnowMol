@@ -23,10 +23,10 @@ python knowmol_discovery.py \
 
 Use `--mock-agents` for local smoke tests that do not call an LLM API.
 During discovery, candidate features are consolidated by validation-split
-performance; the test split is reported only as a held-out monitor. The initial
-feature dictionaries are `downstream_ml/drug_dict.txt` and
-`downstream_ml/protein_dict.txt`; newly mined fragments are written under
-`discovered_fragments/`.
+performance; the test split is reported only as a held-out monitor. The current
+feature dictionaries live in `discovered_fragments/drug_dict.txt` and
+`discovered_fragments/protein_dict.txt`; generated discovery runs are written
+under `discovered_fragments/runs/`.
 
 ## MoleculeNet Data
 
@@ -83,7 +83,7 @@ loaders normalize them to `drug,target,label` automatically.
 - `knowmol_discovery.py`: iterative KnowMol discovery runner.
 - `agents/`: LLM agents, feature aggregation, memory, validation, and analysis.
 - `downstream_ml/`: feature extraction, validation helpers, and baseline assets.
-- `discovered_fragments/`: output location for newly mined molecule/protein fragments.
+- `discovered_fragments/`: checked-in feature dictionaries plus ignored discovery-run outputs.
 - `scripts/`: auxiliary downstream, MoleculeNet download, mining, and PRMT3 case-study scripts.
 
 Runtime artifacts such as `.env`, `outputs/`, trained models, logs, and Python

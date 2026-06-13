@@ -178,8 +178,9 @@ def main() -> None:
     parser.add_argument("--dataset", choices=SUPPORTED_DATASETS, required=True)
     parser.add_argument("--data", required=True, help="CSV file or split directory containing train/valid/test CSVs")
     parser.add_argument("--output-dir", required=True, help="Directory for ablation validation models")
-    parser.add_argument("--drug-dict", default=str(Path(__file__).with_name("drug_dict.txt")))
-    parser.add_argument("--protein-dict", default=str(Path(__file__).with_name("protein_dict.txt")))
+    default_dict_dir = Path(__file__).resolve().parents[1] / "discovered_fragments"
+    parser.add_argument("--drug-dict", default=str(default_dict_dir / "drug_dict.txt"))
+    parser.add_argument("--protein-dict", default=str(default_dict_dir / "protein_dict.txt"))
     parser.add_argument("--ablations", nargs="+", choices=ABLATION_CHOICES, default=ABLATION_CHOICES)
     parser.add_argument("--time-limit", type=int, default=600)
     parser.add_argument("--presets", default="best_quality")
