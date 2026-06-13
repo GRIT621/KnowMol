@@ -47,12 +47,13 @@ molecule-only datasets.
 
 ## PRMT3 Case Study
 
-The PRMT3 case-study scores were generated with the framework-compatible
-screening script:
+The PRMT3 case study uses the included 20 candidate ligands in
+`data/prmt3/prmt3_candidates_20.csv`. Train the case-study model and score the
+candidates with:
 
 ```bash
 python scripts/prmt3_screen.py \
-  --train-csv ../EviDTI_dataset/data/case_studies/prmt3/PRMT3_Final_Training_Set.csv \
+  --train-csv data/prmt3/prmt3_drugbank_merged_training.csv \
   --ligands-csv data/prmt3/prmt3_candidates_20.csv \
   --output outputs/prmt3/prmt3_scores.csv \
   --use-default-prmt3-seq
@@ -60,10 +61,25 @@ python scripts/prmt3_screen.py \
 
 ## Interpretability
 
-The manuscript visualizations are organized under `interpretability/`:
-`global` for all drug-target records, `target` for one target against all drugs,
-`drug` for one drug against all targets, and `pair` for one drug-target pair.
-Model paths and selected drug/target IDs are passed as command-line parameters.
+The manuscript visualizations can be regenerated with
+`interpretability/shap_visualization.py`. Four modes are supported:
+
+- `global`: all drug-target records.
+- `target`: one fixed target against all drugs.
+- `drug`: one fixed drug against all targets.
+- `pair`: one selected drug-target pair.
+
+Example:
+
+```bash
+python interpretability/shap_visualization.py \
+  --mode target \
+  --dataset davis \
+  --data data/raw/davis_total_cid_unid.csv \
+  --model-path /path/to/AutogluonModels/davis_realwant1 \
+  --target-id ABL1 \
+  --output-dir outputs/interpretability/davis_ABL1
+```
 
 ## Included Data
 
