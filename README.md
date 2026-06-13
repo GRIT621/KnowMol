@@ -55,6 +55,13 @@ python scripts/prmt3_screen.py \
   --use-default-prmt3-seq
 ```
 
+## Interpretability
+
+The manuscript visualizations are organized under `interpretability/`:
+`global` for all drug-target records, `target` for one target against all drugs,
+`drug` for one drug against all targets, and `pair` for one drug-target pair.
+Model paths and selected drug/target IDs are passed as command-line parameters.
+
 ## Included Data
 
 Raw Davis, DrugBank, and KIBA DTI CSV files are included under `data/raw/`:

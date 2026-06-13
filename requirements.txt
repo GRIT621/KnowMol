@@ -8,3 +8,5 @@ rdkit
 lifelines
 autogluon.tabular==1.1.1
 openai>=1.0.0
+matplotlib
+shap
