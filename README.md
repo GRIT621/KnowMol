@@ -103,3 +103,7 @@ loaders normalize them to `drug,target,label` automatically.
 
 Runtime artifacts such as `.env`, `outputs/`, trained models, logs, and Python
 caches are intentionally ignored by Git.
+
+## License
+
+This project is released under the [BSD 3-Clause License](https://opensource.org/license/BSD-3-Clause).
