@@ -99,9 +99,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--protein-dict", default=str(ROOT / "discovered_fragments" / "protein_dict.txt"))
     parser.add_argument("--rounds", type=int, default=3)
     parser.add_argument("--sample-size", type=int, default=10)
-    parser.add_argument("--max-train-rows", type=int, help="Optional smoke-test cap for train rows")
-    parser.add_argument("--max-valid-rows", type=int, help="Optional smoke-test cap for valid rows")
-    parser.add_argument("--max-test-rows", type=int, help="Optional smoke-test cap for test rows")
+    parser.add_argument("--max-train-rows", type=int, help="Optional row cap for train data")
+    parser.add_argument("--max-valid-rows", type=int, help="Optional row cap for validation data")
+    parser.add_argument("--max-test-rows", type=int, help="Optional row cap for test data")
     parser.add_argument("--feedback-strategy", choices=["random", "badcase"], default="badcase")
     parser.add_argument("--mode", choices=["both", "drug", "target", "molecule", "protein"], default="both")
     parser.add_argument("--model", default="pro-deepseek-r1")
@@ -112,11 +112,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--num-cpus", type=int, default=8)
     parser.add_argument(
         "--validator-backend",
-        choices=["tabular", "sklearn"],
+        choices=["tabular", "xgboost"],
         default="tabular",
-        help="Validation backend. Use sklearn for fast local smoke tests.",
+        help="Validation backend. Use xgboost for the manuscript-style surrogate validator.",
     )
-    parser.add_argument("--mock-agents", action="store_true", help="Use deterministic local agent outputs for smoke tests")
+    parser.add_argument("--mock-agents", action="store_true", help="Use deterministic local agent outputs")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--eval-metric", default="roc_auc")
     parser.add_argument("--memory-metric", default="auc_roc")

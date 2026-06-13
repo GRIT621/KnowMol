@@ -44,11 +44,12 @@ python knowmol_discovery.py \
   --rounds 30 \
   --mode both \
   --model deepseek-r1 \
-  --validator-backend tabular
+  --validator-backend xgboost
 ```
 
-Use `--dataset {davis,drugbank,kiba}`. `--validator-backend sklearn` runs a
-faster RandomForest validator instead of AutoGluon.
+Use `--dataset {davis,drugbank,kiba}` to run feature discovery with the XGBoost
+surrogate validator. Per-round SHAP feature attributions are saved with the
+discovery outputs.
 
 ### Molecular property prediction (MoleculeNet)
 
