@@ -52,7 +52,7 @@ screening script:
 ```bash
 python scripts/prmt3_screen.py \
   --train-csv ../EviDTI_dataset/data/case_studies/prmt3/PRMT3_Final_Training_Set.csv \
-  --ligands-csv ../EviDTI_dataset/data/case_studies/prmt3/PRMT3_drugbank_Matches.csv \
+  --ligands-csv data/prmt3/prmt3_candidates_20.csv \
   --output outputs/prmt3/prmt3_scores.csv \
   --use-default-prmt3-seq
 ```
