@@ -11,7 +11,9 @@ try:
         FEATURE_NAMES,
         KIBA_FEATURE_NAMES,
         STANDARD_AA,
+        SUPPORTED_DATASETS,
         get_tabular_predictor,
+        is_molecule_only_dataset,
         load_feature_dicts,
         load_feature_vocab,
         print_metrics,
@@ -28,7 +30,9 @@ except ImportError:
         FEATURE_NAMES,
         KIBA_FEATURE_NAMES,
         STANDARD_AA,
+        SUPPORTED_DATASETS,
         get_tabular_predictor,
+        is_molecule_only_dataset,
         load_feature_dicts,
         load_feature_vocab,
         print_metrics,
@@ -78,16 +82,21 @@ def build_feature_groups(
     drug_fragment_values = data["drug"].apply(lambda s: substructure_features(s, substructures))
     drug_fragment = pd.DataFrame(drug_fragment_values.tolist(), columns=list(substructures.keys()))
 
-    protein_basic_values = data["target"].apply(protein_to_features_optimized)
-    prot_base_names = ["gravy", "aromaticity", "instability", "isoelectric_point", "mol_weight"]
-    prot_aac_names = [f"aac_{aa}" for aa in STANDARD_AA]
-    protein_basic = pd.DataFrame(protein_basic_values.tolist(), columns=prot_base_names + prot_aac_names)
+    has_target = "target" in data.columns and not is_molecule_only_dataset(dataset_type)
+    if has_target:
+        protein_basic_values = data["target"].apply(protein_to_features_optimized)
+        prot_base_names = ["gravy", "aromaticity", "instability", "isoelectric_point", "mol_weight"]
+        prot_aac_names = [f"aac_{aa}" for aa in STANDARD_AA]
+        protein_basic = pd.DataFrame(protein_basic_values.tolist(), columns=prot_base_names + prot_aac_names)
 
-    protein_fragment_values = data["target"].apply(lambda s: protein_substructure_features(s, fragments))
-    protein_fragment = pd.DataFrame(
-        protein_fragment_values.tolist(),
-        columns=[f"frag_{i + 1}" for i in range(len(fragments))],
-    )
+        protein_fragment_values = data["target"].apply(lambda s: protein_substructure_features(s, fragments))
+        protein_fragment = pd.DataFrame(
+            protein_fragment_values.tolist(),
+            columns=[f"frag_{i + 1}" for i in range(len(fragments))],
+        )
+    else:
+        protein_basic = pd.DataFrame(index=data.index)
+        protein_fragment = pd.DataFrame(index=data.index)
 
     y = data["label"].reset_index(drop=True)
     return {
@@ -168,7 +177,7 @@ def train_and_evaluate_ablation(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="KnowMol downstream ML ablation experiments")
-    parser.add_argument("--dataset", choices=["davis", "drugbank", "kiba"], required=True)
+    parser.add_argument("--dataset", choices=SUPPORTED_DATASETS, required=True)
     parser.add_argument("--data", required=True, help="CSV file or split directory containing train/valid/test CSVs")
     parser.add_argument("--output-dir", required=True, help="Directory for ablation validation models")
     parser.add_argument(
@@ -191,10 +200,16 @@ def main() -> None:
     print(f"Dataset: {args.dataset}")
     print(f"Train={len(train_data)} Valid={len(valid_data)} Test={len(test_data)}")
     print(f"Substructures={len(substructures)} Protein fragments={len(fragments)}")
+    molecule_only = is_molecule_only_dataset(args.dataset) or "target" not in train_data.columns
+    if molecule_only:
+        print("Molecule-only dataset detected: protein ablations are skipped.")
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     rows = []
     for ablation in args.ablations:
+        if molecule_only and ablation in {"no_protein_basic", "no_protein_fragment"}:
+            print(f"Skipping {ablation}: molecule-only datasets do not contain protein features.")
+            continue
         metrics = train_and_evaluate_ablation(
             train_data,
             valid_data,
