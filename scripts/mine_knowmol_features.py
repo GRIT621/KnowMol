@@ -48,13 +48,10 @@ def sample_records(train: pd.DataFrame, sample_size: int, seed: int) -> list[dic
     return train.loc[selected, required].to_dict("records")
 
 
-def load_existing_keys(path: str | None) -> tuple[list[str], list[str]]:
-    if not path:
-        return [], []
+def load_existing_keys(drug_dict: str | None, protein_dict: str | None) -> tuple[list[str], list[str]]:
+    from downstream_ml.validation import load_feature_dicts
 
-    from downstream_ml.validation import load_feature_vocab
-
-    substructures, fragments = load_feature_vocab(path)
+    substructures, fragments = load_feature_dicts(drug_dict, protein_dict)
     return list(substructures.keys()), list(fragments.keys())
 
 
@@ -99,8 +96,13 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
     )
     parser.add_argument("--data", required=True, help="CSV file or split directory containing train/valid/test CSVs")
-    parser.add_argument("--output", required=True, help="Output Python file with substructure_patterns and binding_fragments")
-    parser.add_argument("--existing-vocab", help="Optional Python vocab file whose keys should be excluded")
+    parser.add_argument(
+        "--output",
+        default=str(ROOT / "discovered_fragments" / "manual" / "knowmol_vocab.py"),
+        help="Output Python file with substructure_patterns and binding_fragments",
+    )
+    parser.add_argument("--drug-dict", default=str(ROOT / "downstream_ml" / "drug_dict.txt"))
+    parser.add_argument("--protein-dict", default=str(ROOT / "downstream_ml" / "protein_dict.txt"))
     parser.add_argument("--mode", choices=["both", "molecule", "protein"], default="both")
     parser.add_argument("--sample-size", type=int, default=20)
     parser.add_argument("--seed", type=int, default=42)
@@ -120,7 +122,7 @@ def main() -> None:
         raise ValueError("Molecule-only datasets do not contain protein targets; use --mode molecule.")
     effective_mode = "molecule" if molecule_only and args.mode == "both" else args.mode
     samples = sample_records(train, args.sample_size, args.seed)
-    existing_substructures, existing_fragments = load_existing_keys(args.existing_vocab)
+    existing_substructures, existing_fragments = load_existing_keys(args.drug_dict, args.protein_dict)
     context = DatasetContext(dataset_name=args.dataset)
 
     substructures: list[str] = []

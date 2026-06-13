@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import ast
-import importlib.util
 import os
 from pathlib import Path
 from typing import Any, Dict, Iterable, Tuple
@@ -102,40 +101,14 @@ def _load_vocab_assignments(path: str | Path | None) -> dict[str, Any]:
     return found
 
 
-def load_feature_vocab(vocab_py: str | Path | None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """Load substructure_patterns and binding_fragments from one combined vocab file."""
-    if vocab_py is None:
-        return {}, {}
-
-    path = Path(vocab_py).expanduser().resolve()
-    found = _load_vocab_assignments(path)
-    if "substructure_patterns" in found and "binding_fragments" in found:
-        return found["substructure_patterns"], found["binding_fragments"]
-
-    # Fallback for vocabulary files that build the dictionaries programmatically.
-    # Prefer the AST path above because it does not execute old experiment scripts.
-    spec = importlib.util.spec_from_file_location("knowmol_feature_vocab", path)
-    if spec is None or spec.loader is None:
-        raise ValueError(f"Cannot load vocabulary file: {path}")
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    substructures = getattr(module, "substructure_patterns", {})
-    fragments = getattr(module, "binding_fragments", {})
-    return substructures, fragments
-
-
 def load_feature_dicts(
     drug_dict: str | Path | None = None,
     protein_dict: str | Path | None = None,
-    vocab_py: str | Path | None = None,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """Load KnowMol feature dictionaries from separate drug/protein txt files or a legacy combined file."""
-    if drug_dict or protein_dict:
-        drug_found = _load_vocab_assignments(drug_dict) if drug_dict else {}
-        protein_found = _load_vocab_assignments(protein_dict) if protein_dict else {}
-        return drug_found.get("substructure_patterns", {}), protein_found.get("binding_fragments", {})
-    return load_feature_vocab(vocab_py)
+    """Load KnowMol feature dictionaries from separate drug/protein txt files."""
+    drug_found = _load_vocab_assignments(drug_dict) if drug_dict else {}
+    protein_found = _load_vocab_assignments(protein_dict) if protein_dict else {}
+    return drug_found.get("substructure_patterns", {}), protein_found.get("binding_fragments", {})
 
 
 def smiles_to_features_enhanced(smiles: str) -> list[float]:
@@ -521,7 +494,7 @@ def print_metrics(metrics: dict[str, float]) -> None:
 
 
 def train_mode(args: argparse.Namespace) -> None:
-    substructures, fragments = load_feature_dicts(args.drug_dict, args.protein_dict, args.vocab_py)
+    substructures, fragments = load_feature_dicts(args.drug_dict, args.protein_dict)
     train, valid, test = read_or_split_dataset(args.data, args.dataset, args.seed)
 
     print(f"Dataset: {args.dataset}")
@@ -587,7 +560,7 @@ def evaluate_predictor(
 
 
 def test_mode(args: argparse.Namespace) -> None:
-    substructures, fragments = load_feature_dicts(args.drug_dict, args.protein_dict, args.vocab_py)
+    substructures, fragments = load_feature_dicts(args.drug_dict, args.protein_dict)
     _, _, test = read_or_split_dataset(args.data, args.dataset, args.seed)
 
     TabularPredictor = get_tabular_predictor()
@@ -613,7 +586,7 @@ def predict_single(
 
 
 def prmt3_mode(args: argparse.Namespace) -> None:
-    substructures, fragments = load_feature_dicts(args.drug_dict, args.protein_dict, args.vocab_py)
+    substructures, fragments = load_feature_dicts(args.drug_dict, args.protein_dict)
     TabularPredictor = get_tabular_predictor()
     predictor = TabularPredictor.load(args.model_path)
 
@@ -657,11 +630,6 @@ def prmt3_mode(args: argparse.Namespace) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="KnowMol downstream ML validation")
-    parser.add_argument(
-        "--vocab-py",
-        default="/data/lsj/KnowMol/EviDTI_dataset/knowmol_36.py",
-        help="Legacy combined Python/txt file defining substructure_patterns and binding_fragments",
-    )
     parser.add_argument("--drug-dict", default=str(Path(__file__).with_name("drug_dict.txt")))
     parser.add_argument("--protein-dict", default=str(Path(__file__).with_name("protein_dict.txt")))
 

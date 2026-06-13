@@ -8,6 +8,8 @@ venv/
 docs/
 models/
 outputs/
+discovered_fragments/*
+!discovered_fragments/README.md
 AutogluonModels/
 
 *.log

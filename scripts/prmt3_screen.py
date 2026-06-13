@@ -166,7 +166,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--load-model", action="store_true", help="Load --model-path instead of training a new model")
     parser.add_argument("--drug-dict", default=str(ROOT / "downstream_ml" / "drug_dict.txt"))
     parser.add_argument("--protein-dict", default=str(ROOT / "downstream_ml" / "protein_dict.txt"))
-    parser.add_argument("--vocab-py", help="Legacy combined vocab defining substructure_patterns and binding_fragments")
     parser.add_argument("--protein-seq")
     parser.add_argument("--protein-seq-file")
     parser.add_argument("--use-default-prmt3-seq", action="store_true", help="Use the PRMT3 sequence from the original case study")
@@ -186,7 +185,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     args = build_parser().parse_args()
     default_target = load_protein_sequence(args)
-    substructures, fragments = load_feature_dicts(args.drug_dict, args.protein_dict, args.vocab_py)
+    substructures, fragments = load_feature_dicts(args.drug_dict, args.protein_dict)
 
     if args.load_model:
         if not args.model_path:

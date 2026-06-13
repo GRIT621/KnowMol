@@ -119,11 +119,10 @@ def build_feature_matrix(
     predictor: Any,
     drug_dict: str,
     protein_dict: str,
-    vocab_py: str | None,
 ) -> tuple[pd.DataFrame, pd.Series]:
     from downstream_ml.validation import extract_features, load_feature_dicts
 
-    substructures, fragments = load_feature_dicts(drug_dict, protein_dict, vocab_py)
+    substructures, fragments = load_feature_dicts(drug_dict, protein_dict)
     x_data, y_data = extract_features(frame, substructures, fragments, dataset)
     model_features = predictor_features(predictor)
     return x_data.reindex(columns=model_features, fill_value=0).fillna(0), y_data
@@ -244,7 +243,6 @@ def run(args: argparse.Namespace) -> None:
         predictor,
         args.drug_dict,
         args.protein_dict,
-        args.vocab_py,
     )
     pd.concat([x_data, y_data.rename("label")], axis=1).to_csv(output_dir / "selected_features.csv", index=False)
 
@@ -254,7 +252,7 @@ def run(args: argparse.Namespace) -> None:
 
     from downstream_ml.validation import load_feature_dicts
 
-    substructures, _ = load_feature_dicts(args.drug_dict, args.protein_dict, args.vocab_py)
+    substructures, _ = load_feature_dicts(args.drug_dict, args.protein_dict)
     view = default_summary_view(args.mode, args.summary_view)
     x_summary, shap_summary = select_features(x_data, shap_values, view, set(substructures))
     plot_summary(shap_summary, x_summary, output_dir, args.top_k, f"{args.mode}_{view}")
@@ -290,7 +288,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--summary-view", choices=["auto", "all", "drug", "protein"], default="auto")
     parser.add_argument("--drug-dict", default=str(ROOT / "downstream_ml" / "drug_dict.txt"))
     parser.add_argument("--protein-dict", default=str(ROOT / "downstream_ml" / "protein_dict.txt"))
-    parser.add_argument("--vocab-py")
     parser.add_argument("--max-rows", type=int, default=200)
     parser.add_argument("--background-size", type=int, default=50)
     parser.add_argument("--top-k", type=int, default=20)

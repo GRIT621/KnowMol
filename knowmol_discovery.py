@@ -94,8 +94,7 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
     )
     parser.add_argument("--data", required=True, help="CSV file or split directory containing train/valid/test CSVs")
-    parser.add_argument("--output-dir", default="outputs/knowmol_api_sklearn_target")
-    parser.add_argument("--existing-vocab", help="Optional vocab file to resume from")
+    parser.add_argument("--output-dir", default="discovered_fragments/runs/default")
     parser.add_argument("--drug-dict", default=str(ROOT / "downstream_ml" / "drug_dict.txt"))
     parser.add_argument("--protein-dict", default=str(ROOT / "downstream_ml" / "protein_dict.txt"))
     parser.add_argument("--rounds", type=int, default=3)
@@ -124,7 +123,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--analysis-report", default="multi_level_analysis.md")
     parser.add_argument("--long-drug-dict", help="Optional long-memory drug_dict.txt path")
     parser.add_argument("--long-protein-dict", help="Optional long-memory protein_dict.txt path")
-    parser.add_argument("--long-memory", help="Legacy combined long-memory vocab path")
     return parser
 
 
@@ -133,7 +131,6 @@ def main() -> None:
     from downstream_ml.validation import (
         is_molecule_only_dataset,
         load_feature_dicts,
-        load_feature_vocab,
         print_metrics,
         read_or_split_dataset,
     )
@@ -164,14 +161,9 @@ def main() -> None:
 
     initial_substructures: dict[str, Any] = {}
     initial_fragments: dict[str, Any] = {}
-    memory_source = args.existing_vocab
-    if memory_source is None and long_drug_dict_path.exists() and long_protein_dict_path.exists():
+    if long_drug_dict_path.exists() and long_protein_dict_path.exists():
         initial_substructures, initial_fragments = load_feature_dicts(long_drug_dict_path, long_protein_dict_path)
-    elif memory_source is None and args.long_memory and Path(args.long_memory).exists():
-        memory_source = str(Path(args.long_memory))
-    if memory_source:
-        initial_substructures, initial_fragments = load_feature_vocab(memory_source)
-    elif not initial_substructures and not initial_fragments and args.drug_dict and args.protein_dict:
+    if not initial_substructures and not initial_fragments and args.drug_dict and args.protein_dict:
         initial_substructures, initial_fragments = load_feature_dicts(args.drug_dict, args.protein_dict)
     if molecule_only:
         initial_fragments = {}

@@ -15,7 +15,6 @@ try:
         get_tabular_predictor,
         is_molecule_only_dataset,
         load_feature_dicts,
-        load_feature_vocab,
         print_metrics,
         read_or_split_dataset,
         compute_binary_metrics,
@@ -34,7 +33,6 @@ except ImportError:
         get_tabular_predictor,
         is_molecule_only_dataset,
         load_feature_dicts,
-        load_feature_vocab,
         print_metrics,
         read_or_split_dataset,
         compute_binary_metrics,
@@ -180,11 +178,6 @@ def main() -> None:
     parser.add_argument("--dataset", choices=SUPPORTED_DATASETS, required=True)
     parser.add_argument("--data", required=True, help="CSV file or split directory containing train/valid/test CSVs")
     parser.add_argument("--output-dir", required=True, help="Directory for ablation validation models")
-    parser.add_argument(
-        "--vocab-py",
-        default="/data/lsj/KnowMol/EviDTI_dataset/knowmol_36.py",
-        help="Legacy combined Python/txt file defining substructure_patterns and binding_fragments",
-    )
     parser.add_argument("--drug-dict", default=str(Path(__file__).with_name("drug_dict.txt")))
     parser.add_argument("--protein-dict", default=str(Path(__file__).with_name("protein_dict.txt")))
     parser.add_argument("--ablations", nargs="+", choices=ABLATION_CHOICES, default=ABLATION_CHOICES)
@@ -195,7 +188,7 @@ def main() -> None:
     parser.add_argument("--eval-metric", default="roc_auc")
     args = parser.parse_args()
 
-    substructures, fragments = load_feature_dicts(args.drug_dict, args.protein_dict, args.vocab_py)
+    substructures, fragments = load_feature_dicts(args.drug_dict, args.protein_dict)
     train_data, valid_data, test_data = read_or_split_dataset(args.data, args.dataset, args.seed)
     print(f"Dataset: {args.dataset}")
     print(f"Train={len(train_data)} Valid={len(valid_data)} Test={len(test_data)}")

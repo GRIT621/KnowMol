@@ -11,7 +11,7 @@ and keeps useful features in long memory.
 python knowmol_discovery.py \
   --dataset davis \
   --data data/raw/davis_total_cid_unid.csv \
-  --output-dir outputs/knowmol_api_sklearn_target \
+  --output-dir discovered_fragments/runs/davis \
   --rounds 5 \
   --sample-size 2 \
   --mode both \
@@ -23,7 +23,10 @@ python knowmol_discovery.py \
 
 Use `--mock-agents` for local smoke tests that do not call an LLM API.
 During discovery, candidate features are consolidated by validation-split
-performance; the test split is reported only as a held-out monitor.
+performance; the test split is reported only as a held-out monitor. The initial
+feature dictionaries are `downstream_ml/drug_dict.txt` and
+`downstream_ml/protein_dict.txt`; newly mined fragments are written under
+`discovered_fragments/`.
 
 ## MoleculeNet Data
 
@@ -34,7 +37,7 @@ After preparing the task CSV, switch the dataset name:
 python knowmol_discovery.py \
   --dataset bace \
   --data data/moleculenet/processed/bace_Class.csv \
-  --output-dir outputs/discovery/bace \
+  --output-dir discovered_fragments/runs/bace \
   --rounds 5 \
   --mode molecule
 ```
@@ -80,6 +83,7 @@ loaders normalize them to `drug,target,label` automatically.
 - `knowmol_discovery.py`: iterative KnowMol discovery runner.
 - `agents/`: LLM agents, feature aggregation, memory, validation, and analysis.
 - `downstream_ml/`: feature extraction, validation helpers, and baseline assets.
+- `discovered_fragments/`: output location for newly mined molecule/protein fragments.
 - `scripts/`: auxiliary downstream, MoleculeNet download, mining, and PRMT3 case-study scripts.
 
 Runtime artifacts such as `.env`, `outputs/`, trained models, logs, and Python
